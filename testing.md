@@ -1,0 +1,31 @@
+What to test for:
+
+- Contract deploys successfully with a balance of 1 Ether 
+- Landlord address can create a new lease with the tenant's address
+- Tenant can pay lease deposit
+    - Should fail if deposit is already paid
+    - Should fail if offset amount is at least $3
+    - Should fail if deposit payment window is over
+    - Should mark lease as deposit paid
+    - Should reset deposit payment window
+- Tenant can pay lease
+    - Should fail if lease deposit not yet paid
+    - Should fail if lease is already paid
+    - Should fail if the payment window is over
+    - Should fail if offset amount is at least $3
+    - Should add a new month every time
+    - Should mark lease as fully paid if no more months left to pay
+        - Should also reset the payment window
+    - If months still left to pay, should add more time to the payment window according to the specified amount
+- Landlords can collect lease deposit
+    - Should fail if payments are not overdue
+    - Should fail if lease is fully paid
+    - Should fail if lease deposit has already been taken
+    - Should reset lease deposit value to 0
+    - Should transfer lease deposit to landlord
+- Tenants can reclaim lease deposit
+    - Should fail is lease is not fully paid
+    - Should fail if lease deposit has already been taken
+    - Should reset lease deposit value to 0
+    - Should transfer lease deposit to tenant
+

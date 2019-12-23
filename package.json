@@ -1,0 +1,20 @@
+{
+  "name": "leaseGenerator",
+  "version": "1.0.0",
+  "description": "",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "bridge": "./node_modules/.bin/ethereum-bridge -a 9 -H 127.0.0.1 -p 8546 --dev",
+    "chain": "ganache-cli -p 8546 --db"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "ethereum-bridge": "^0.6.2",
+    "truffle-assertions": "^0.9.2"
+  }
+}
