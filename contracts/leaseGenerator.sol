@@ -50,7 +50,7 @@ contract LeaseGenerator is usingProvable {
         uint16 leaseDepositUsd,
         uint32 leasePaymentWindowSeconds,
         bool leaseDepositPaid,
-        bool leaseFullyPaid,
+        bool leaseFullyPaid
     );
 
     event leaseDepositPaid(
@@ -87,7 +87,7 @@ contract LeaseGenerator is usingProvable {
     constructor () public payable {
             landlordAddress = msg.sender;
             provable_setCustomGasPrice(100000000000);
-            OAR = OracleAddrResolverI(0xB7D2d92e74447535088A32AD65d459E97f692222);
+            OAR = OracleAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);
     }
 
     function fetchUsdRate() internal {
@@ -133,7 +133,6 @@ contract LeaseGenerator is usingProvable {
             0,
             depositPaymentWindowEnd,
             false,
-            false,
             false
         );
 
@@ -143,7 +142,6 @@ contract LeaseGenerator is usingProvable {
             monthlyAmountUsd,
             leaseDepositUsd,
             leasePaymentWindowSeconds,
-            false,
             false,
             false
         );
@@ -292,7 +290,6 @@ contract LeaseGenerator is usingProvable {
         uint64,
         uint64,
         bool,
-        bool,
         bool) {
         Lease memory lease = tenantLease[tenant];
         return (
@@ -304,7 +301,8 @@ contract LeaseGenerator is usingProvable {
             lease.leasePaymentWindowEnd,
             lease.depositPaymentWindowEnd,
             lease.leaseDepositPaid,
-            lease.leaseFullyPaid,
+            lease.leaseFullyPaid
+        );
     }
 
     function getRate() public view returns (uint) {

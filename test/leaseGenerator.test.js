@@ -28,9 +28,6 @@ contract("LeaseGenerator", (accounts) => {
     let leasePaymentAmount
     let leasePaymentAmountFull
 
-    web3.eth.getBalance(landlord).then(bal => console.log(bal))
-    web3.eth.getBalance(tenant).then(bal => console.log(bal))
-
     beforeEach(async () => {
         rate = await axios.get('https://api.pro.coinbase.com/products/ETH-USD/ticker')
         usdRate = rate.data.price
