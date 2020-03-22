@@ -1,3 +1,5 @@
 node_modules
 build/
 bridge.log
+ganache
+.node*

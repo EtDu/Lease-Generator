@@ -1,4 +1,4 @@
-pragma solidity ^0.5.1;
+pragma solidity ^0.5.17;
 import "./SafeMath.sol";
 import "./provableAPI.sol";
 
@@ -11,6 +11,8 @@ contract LeaseGenerator is usingProvable {
 
     address payable tenantAddress;
     uint tenantPayment;
+
+    uint leaseBalanceWei;
 
     enum State {
         payingLeaseDeposit,
@@ -28,7 +30,7 @@ contract LeaseGenerator is usingProvable {
         uint16 monthlyAmountUsd;
         uint16 leaseDepositUsd;
         uint32 leasePaymentWindowSeconds;
-        uint64 paymentWindowEnd;
+        uint64 leasePaymentWindowEnd;
         uint64 depositPaymentWindowEnd;
         bool leaseDepositPaid;
         bool leaseFullyPaid;
@@ -48,8 +50,7 @@ contract LeaseGenerator is usingProvable {
 
     event leaseDepositPaid(
         address tenantAddress,
-        uint amountSentUsd,
-        uint leaseDepositUsd
+        uint amountSentUsd
     );
 
     event leasePaymentPaid(
@@ -73,6 +74,11 @@ contract LeaseGenerator is usingProvable {
         uint monthsPaid
     );
 
+    event fundsWithdrawn(
+        uint transferAmount,
+        uint leaseBalanceWei
+    );
+
     mapping (bytes32 => bool) validIds;
     mapping (address => Lease) tenantLease;
 
@@ -84,7 +90,7 @@ contract LeaseGenerator is usingProvable {
     constructor () public payable {
             landlordAddress = msg.sender;
             provable_setCustomGasPrice(100000000000);
-            OAR = OracleAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);
+            OAR = OracleAddrResolverI(0xB7D2d92e74447535088A32AD65d459E97f692222);
     }
 
     function fetchUsdRate() internal {
@@ -105,6 +111,8 @@ contract LeaseGenerator is usingProvable {
             _payLease();
         } else if (workingState == State.collectingLeaseDeposit) {
             _collectLeaseDeposit();
+        } else if (workingState == State.reclaimingLeaseDeposit) {
+            _reclaimLeaseDeposit();
         }
     }
 
@@ -161,17 +169,17 @@ contract LeaseGenerator is usingProvable {
         uint amountSentUsd = tenantPayment.mul(ETHUSD).div(1e18);
 
         require(
-            amountSentUsd >= lease.leaseDepositUsd - 3 &&
-            amountSentUsd <= lease.leaseDepositUsd + 3,
-            "Deposit payment must equal the specified amount with a maximum offset of $3");
+            amountSentUsd >= lease.leaseDepositUsd - 5 &&
+            amountSentUsd <= lease.leaseDepositUsd + 5,
+            "Deposit payment must equal to the deposit amount with a maximum offset of $5");
 
         lease.leaseDepositPaid = true;
         lease.depositPaymentWindowEnd = 0;
+        lease.leasePaymentWindowEnd = uint64(now + lease.leasePaymentWindowSeconds);
 
         emit leaseDepositPaid(
             tenantAddress,
-            amountSentUsd,
-            lease.leaseDepositUsd
+            amountSentUsd
         );
     }
 
@@ -179,7 +187,7 @@ contract LeaseGenerator is usingProvable {
         Lease storage lease = tenantLease[msg.sender];
         require(lease.leaseDepositPaid, "Lease deposit must be paid before making lease payments");
         require(!lease.leaseFullyPaid, "Lease has already been fully paid");
-        require(lease.paymentWindowEnd >= now, "Lease payment must fit into payment window");
+        require(lease.leasePaymentWindowEnd >= now, "Lease payment must fit into payment window");
 
         tenantAddress = msg.sender;
         tenantPayment = msg.value;
@@ -193,23 +201,24 @@ contract LeaseGenerator is usingProvable {
         uint amountSentUsd = tenantPayment.mul(ETHUSD).div(1e18);
 
         require(
-            amountSentUsd >= lease.monthlyAmountUsd - 3 &&
-            amountSentUsd <= lease.monthlyAmountUsd + 3,
-            "Deposit payment must equal the specified amount with a maximum offset of $3");
+            amountSentUsd >= lease.monthlyAmountUsd - 5,
+            "Lease payment must be greater than or equal to the monthly amount with a maximum offset of $5");
 
-        lease.monthsPaid = lease.monthsPaid + 1;
+        uint monthsPaid = uint256(lease.monthsPaid).add(amountSentUsd.add(10).div(uint256(lease.monthlyAmountUsd)));
+        lease.monthsPaid = uint8(monthsPaid);
+        leaseBalanceWei = leaseBalanceWei.add(tenantPayment);
 
-        if (lease.monthsPaid == lease.numberOfMonths) {
+        if (monthsPaid == lease.numberOfMonths) {
             lease.leaseFullyPaid = true;
-            lease.paymentWindowEnd = 0;
+            lease.leasePaymentWindowEnd = 0;
 
             emit leaseFullyPaid(
                 tenantAddress,
                 lease.numberOfMonths,
-                lease.monthsPaid
+                monthsPaid
             );
         } else {
-            lease.paymentWindowEnd = lease.paymentWindowEnd + lease.leasePaymentWindowSeconds;
+            lease.leasePaymentWindowEnd = lease.leasePaymentWindowEnd + lease.leasePaymentWindowSeconds;
 
             emit leasePaymentPaid(
                 tenantAddress,
@@ -221,7 +230,7 @@ contract LeaseGenerator is usingProvable {
     function collectLeaseDeposit(address payable tenantAddr) public onlyLandlord {
         Lease storage lease = tenantLease[tenantAddr];
         require(!lease.leaseFullyPaid, "Cannot collect lease deposit if lease is already paid");
-        require(lease.paymentWindowEnd <= now, "Lease payment must be overdue past payment window to collect lease deposit");
+        require(lease.leasePaymentWindowEnd <= now, "Lease payment must be overdue past payment window to collect lease deposit");
         require(lease.leaseDepositUsd > 0, "Lease deposit has already been removed");
 
         tenantAddress = tenantAddr;
@@ -252,7 +261,7 @@ contract LeaseGenerator is usingProvable {
         fetchUsdRate();
     }
 
-    function _reclaimLeaseDepost() internal {
+    function _reclaimLeaseDeposit() internal {
         workingState = State.idle;
         Lease storage lease = tenantLease[tenantAddress];
         uint leaseDeposit = lease.leaseDepositUsd;
@@ -265,7 +274,19 @@ contract LeaseGenerator is usingProvable {
         );
     }
 
-    function getLease(address addr) public view returns (
+    function withdrawFunds() public onlyLandlord {
+        require(leaseBalanceWei > 0, "Lease balance must be greater than 0");
+        uint transferAmount = leaseBalanceWei;
+        leaseBalanceWei = 0;
+        landlordAddress.transfer(transferAmount);
+
+        emit fundsWithdrawn(
+            transferAmount,
+            leaseBalanceWei
+        );
+    }
+
+    function getLease(address tenant) public view returns (
         uint8,
         uint8,
         uint16,
@@ -276,14 +297,14 @@ contract LeaseGenerator is usingProvable {
         bool,
         bool,
         bool) {
-        Lease memory lease = tenantLease[addr];
+        Lease memory lease = tenantLease[tenant];
         return (
             lease.numberOfMonths,
             lease.monthsPaid,
             lease.monthlyAmountUsd,
             lease.leaseDepositUsd,
             lease.leasePaymentWindowSeconds,
-            lease.paymentWindowEnd,
+            lease.leasePaymentWindowEnd,
             lease.depositPaymentWindowEnd,
             lease.leaseDepositPaid,
             lease.leaseFullyPaid,
@@ -297,4 +318,6 @@ contract LeaseGenerator is usingProvable {
     function getContractBalance() public view returns (uint) {
         return uint(address(this).balance);
     }
+
+    function() external payable {}
 }

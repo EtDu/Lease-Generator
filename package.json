@@ -8,13 +8,14 @@
   },
   "scripts": {
     "bridge": "./node_modules/.bin/ethereum-bridge -a 9 -H 127.0.0.1 -p 8546 --dev",
-    "chain": "ganache-cli -p 8546 --db"
+    "chain": "ganache-cli -p 8546 --defaultBalanceEther 10000 --db ./ganache/"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "axios": "^0.19.2",
     "ethereum-bridge": "^0.6.2",
-    "truffle-assertions": "^0.9.2"
+    "node-fetch": "^2.6.0"
   }
 }
