@@ -33,11 +33,15 @@ contract LeaseGenerator is usingProvable {
         uint64 depositPaymentWindowEnd;
         bool leaseDepositPaid;
         bool leaseFullyPaid;
-        bool leaseClosed;
     }
 
     mapping (bytes32 => bool) validIds;
     mapping (address => Lease) tenantLease;
+
+    modifier onlyLandlord() {
+        require(msg.sender == landlordAddress, "Must be the landlord to create a lease");
+        _;
+    }
 
     event leaseCreated(
         uint8 numberOfMonths,
@@ -47,7 +51,6 @@ contract LeaseGenerator is usingProvable {
         uint32 leasePaymentWindowSeconds,
         bool leaseDepositPaid,
         bool leaseFullyPaid,
-        bool leaseClosed
     );
 
     event leaseDepositPaid(
@@ -80,11 +83,6 @@ contract LeaseGenerator is usingProvable {
         uint transferAmount,
         uint leaseBalanceWei
     );
-
-    modifier onlyLandlord() {
-        require(msg.sender == landlordAddress, "Must be the landlord to create a lease");
-        _;
-    }
 
     constructor () public payable {
             landlordAddress = msg.sender;
@@ -307,7 +305,6 @@ contract LeaseGenerator is usingProvable {
             lease.depositPaymentWindowEnd,
             lease.leaseDepositPaid,
             lease.leaseFullyPaid,
-            lease.leaseClosed);
     }
 
     function getRate() public view returns (uint) {

@@ -18,7 +18,6 @@ contract("LeaseGenerator", (accounts) => {
         'depositPaymentWindowEnd': '6',
         'leaseDepositPaid': '7',
         'leaseFullyPaid': '8',
-        'leaseClosed': '9'
     }
 
     const landlord = accounts[0]
