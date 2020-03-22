@@ -7,11 +7,10 @@ contract LeaseGenerator is usingProvable {
     using SafeMath for uint;
 
     address payable landlordAddress;
-    uint ETHUSD;
-
     address payable tenantAddress;
-    uint tenantPayment;
 
+    uint ETHUSD;
+    uint tenantPayment;
     uint leaseBalanceWei;
 
     enum State {
