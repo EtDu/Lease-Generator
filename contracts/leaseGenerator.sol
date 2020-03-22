@@ -36,6 +36,9 @@ contract LeaseGenerator is usingProvable {
         bool leaseClosed;
     }
 
+    mapping (bytes32 => bool) validIds;
+    mapping (address => Lease) tenantLease;
+
     event leaseCreated(
         uint8 numberOfMonths,
         uint8 monthsPaid,
@@ -77,9 +80,6 @@ contract LeaseGenerator is usingProvable {
         uint transferAmount,
         uint leaseBalanceWei
     );
-
-    mapping (bytes32 => bool) validIds;
-    mapping (address => Lease) tenantLease;
 
     modifier onlyLandlord() {
         require(msg.sender == landlordAddress, "Must be the landlord to create a lease");
