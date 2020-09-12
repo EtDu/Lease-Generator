@@ -16,6 +16,6 @@
   "dependencies": {
     "axios": "^0.19.2",
     "ethereum-bridge": "^0.6.2",
-    "node-fetch": "^2.6.0"
+    "node-fetch": "^2.6.1"
   }
 }
